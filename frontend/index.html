@@ -206,12 +206,12 @@
       <div>
         <label class="block text-xs text-gray-500 mb-1">
           GitHub Fine-grained PAT
-          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank"
+          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer"
              class="text-blue-500 underline ml-1">Create</a>
         </label>
         <input x-model="setup.token" type="password" placeholder="github_pat_..."
                class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:outline-none">
-        <p class="text-xs text-gray-400 mt-1">Scope: this repo only, Contents: Read and Write</p>
+        <p class="text-xs text-gray-500 mt-1">仅授权当前仓库。读取数据库需要 Contents: Read；导出 PDF 需要 Contents: Read and write 或 Actions: Read and write。单次运行和删除需要 Actions: Read and write；保存订阅需要 Secrets: Read and write。</p>
       </div>
 
       <!-- 4 Secrets -->
@@ -750,6 +750,11 @@
           </div>
         </div>
       </template>
+      <p class="text-xs text-gray-500">
+        导出 PDF 需要 PAT 已授权当前仓库，并具备 Contents: Read and write 或 Actions: Read and write。
+        <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer"
+           class="text-blue-500 underline">管理 PAT 权限</a>。更换 PAT 后点击 Save &amp; Reload。
+      </p>
     </div>
 
     <h2 class="text-lg font-bold text-gray-800 mt-8 mb-4">Advanced</h2>

@@ -284,10 +284,12 @@ async function _triggerExportWorkflow(
   // the resulting PDF to RECEIVER_EMAIL — same output the user gets when
   // triggering the workflow manually from the Actions UI.
   //
-  // Requires the PAT to grant Actions: Write (in addition to Contents:RW).
+  // Prefer workflow_dispatch (Actions: write). Older setup instructions
+  // only requested Contents: write, so retry a permission denial via
+  // repository_dispatch, which GitHub authorizes with that permission.
   const url = `${_GH_API}/repos/${owner}/${repo}/actions/workflows/export.yml/dispatches`;
   const payload = {
-    ref,
+    ref: ref || "main",
     inputs: {
       course_id: String(courseId),
       export_type: exportType || "PDF",
@@ -301,12 +303,36 @@ async function _triggerExportWorkflow(
   });
   if (res.status === 204) return; // success — workflow_dispatch returns 204 No Content
   const body = await res.text();
-  if (res.status === 403 || res.status === 404) {
+  if ((res.status === 403 || res.status === 404) && payload.ref === "main") {
+    // repository_dispatch always runs the default-branch workflow. Do not
+    // silently change the requested code when exporting from another ref.
+    const fallback = await fetch(`${_GH_API}/repos/${owner}/${repo}/dispatches`, {
+      method: "POST",
+      headers: { ..._ghHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "export-course",
+        client_payload: payload.inputs,
+      }),
+    });
+    if (fallback.status === 204) return;
+    const fallbackBody = await fallback.text();
+    if (fallback.status !== 403 && fallback.status !== 404) {
+      throw new Error(`GitHub repository dispatch error ${fallback.status}: ${fallbackBody}`);
+    }
     throw new Error(
-      "无法触发导出 workflow。请确认你的 GitHub PAT 已开启 " +
-      "Actions: Read and write 权限（Contents 权限不足以触发 workflow）。" +
-      `服务端返回：${res.status} ${body}`
+      "无法触发导出。请在 GitHub PAT 设置中确认 Resource owner 和所选仓库正确，" +
+      "并开启 Contents: Read and write（兼容导出）或 Actions: Read and write（直接导出）。" +
+      "如果更换了 PAT，请到本页 Settings 更新后 Save & Reload。" +
+      `服务端返回：workflow_dispatch ${res.status} ${body}; repository_dispatch ${fallback.status} ${fallbackBody}`
     );
+  }
+  if (res.status === 403) {
+    throw new Error("此分支的导出需要 PAT 的 Actions: Read and write 权限。" +
+      `服务端返回：${res.status} ${body}`);
+  }
+  if (res.status === 404) {
+    throw new Error("找不到导出 workflow，请确认 PAT 已授权此仓库，且默认分支存在 export.yml。" +
+      `服务端返回：${res.status} ${body}`);
   }
   if (res.status === 422) {
     throw new Error(

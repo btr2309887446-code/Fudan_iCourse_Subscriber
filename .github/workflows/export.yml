@@ -1,6 +1,8 @@
 name: Export Course Summaries
 
 on:
+  repository_dispatch:
+    types: [export-course]
   workflow_dispatch:
     inputs:
       course_id:
@@ -28,8 +30,23 @@ jobs:
   export:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      EXPORT_COURSE_ID: ${{ inputs.course_id || github.event.client_payload.course_id }}
+      EXPORT_TYPE: ${{ inputs.export_type || github.event.client_payload.export_type || 'HTML' }}
+      EXPORT_SUB_IDS: ${{ inputs.sub_ids || github.event.client_payload.sub_ids }}
 
     steps:
+      - name: Validate export request
+        run: |
+          if [ -z "$EXPORT_COURSE_ID" ]; then
+            echo "::error::course_id is required."
+            exit 1
+          fi
+          case "$EXPORT_TYPE" in
+            HTML|PDF|Markdown) ;;
+            *) echo "::error::export_type must be HTML, PDF or Markdown."; exit 1 ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - name: Set up Python
@@ -49,7 +66,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install PDF dependencies
-        if: inputs.export_type == 'PDF'
+        if: env.EXPORT_TYPE == 'PDF'
         run: |
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libcairo2
@@ -126,10 +143,8 @@ jobs:
           SMTP_EMAIL: ${{ secrets.SMTP_EMAIL }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
-          EXPORT_COURSE_ID: ${{ inputs.course_id }}
-          EXPORT_SUB_IDS: ${{ inputs.sub_ids }}
         run: |
-          case "${{ inputs.export_type }}" in
+          case "$EXPORT_TYPE" in
             "HTML")
               EXPORT_FLAG=""
               ;;
