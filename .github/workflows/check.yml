@@ -2,9 +2,9 @@ name: iCourse Check
 
 on:
   schedule:
-    # Every day at 19:36 BTC (UTC + 8)
-    # 设计这个奇怪的时间是为了避免整点时的github队列峰值，避免排队过久。
-    - cron: "36 11 * * *"
+    # Every 3 days at 00:00 China Standard Time (UTC+8).
+    # GitHub cron uses UTC; the day-of-month interval resets at each month.
+    - cron: "0 16 */3 * *"
   workflow_dispatch:
 
 permissions:
