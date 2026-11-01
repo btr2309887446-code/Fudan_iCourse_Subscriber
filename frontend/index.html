@@ -211,7 +211,7 @@
         </label>
         <input x-model="setup.token" type="password" placeholder="github_pat_..."
                class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:outline-none">
-        <p class="text-xs text-gray-500 mt-1">仅授权当前仓库。读取数据库需要 Contents: Read；导出 PDF 需要 Contents: Read and write 或 Actions: Read and write。单次运行和删除需要 Actions: Read and write；保存订阅需要 Secrets: Read and write。</p>
+        <p class="text-xs text-gray-500 mt-1">仅授权当前仓库。读取数据库需要 Contents: Read；后台导出 PDF 需要 Contents: Read and write 或 Actions: Read and write。本地保存 PDF 无需额外写权限。单次运行和删除需要 Actions: Read and write；保存订阅需要 Secrets: Read and write。</p>
       </div>
 
       <!-- 4 Secrets -->
@@ -751,7 +751,7 @@
         </div>
       </template>
       <p class="text-xs text-gray-500">
-        导出 PDF 需要 PAT 已授权当前仓库，并具备 Contents: Read and write 或 Actions: Read and write。
+        后台导出 PDF 需要 PAT 已授权当前仓库，并具备 Contents: Read and write 或 Actions: Read and write。本地保存 PDF 无需额外写权限。
         <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer"
            class="text-blue-500 underline">管理 PAT 权限</a>。更换 PAT 后点击 Save &amp; Reload。
       </p>
@@ -883,10 +883,22 @@
 
     <div class="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-800 leading-relaxed space-y-1">
       <p>[MD] <strong>复制 Markdown</strong>：导出所选课次的摘要到剪贴板，纯浏览器端操作，无需网络。</p>
+      <p>[PDF] <strong>本地保存 PDF</strong>：打开排版预览，点击打印并选择“另存为 PDF”，无需 PAT 写权限。</p>
       <p>[PDF] <strong>触发后台导出</strong>：通过 GitHub Actions 生成 PDF，发送到 RECEIVER_EMAIL。预计 1-3 分钟。</p>
     </div>
 
-    <div class="px-4 py-3 border-t border-gray-100 flex justify-end gap-2">
+    <div x-show="exportError" role="alert" class="px-4 py-3 bg-red-50 text-sm text-red-800 max-h-40 overflow-y-auto">
+      <p>后台导出未成功。可直接点击“本地保存 PDF”。若要邮件导出，请在
+        <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer"
+           class="underline">GitHub PAT 设置</a>中授权当前仓库，并开启 Actions: Read and write；更换 PAT 后到本页 Settings 更新并保存。
+      </p>
+      <details class="mt-2 text-xs break-words">
+        <summary class="cursor-pointer">错误详情</summary>
+        <p class="mt-1 whitespace-pre-wrap" x-text="exportError"></p>
+      </details>
+    </div>
+
+    <div class="px-4 py-3 border-t border-gray-100 flex flex-wrap justify-end gap-2">
       <button @click="closeExportDialog()"
               :disabled="exportingPdf"
               class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50">
@@ -900,6 +912,10 @@
               :disabled="exportingPdf"
               class="px-4 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
               x-text="exportingPdf ? '触发中…' : '触发后台导出'">
+      </button>
+      <button @click="exportSelectedLocally()"
+              class="px-4 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600">
+        本地保存 PDF
       </button>
     </div>
   </div>

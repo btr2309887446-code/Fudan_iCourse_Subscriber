@@ -260,7 +260,7 @@ document.addEventListener("alpine:init", () => {
     setup: { token: "", stuid: "", uispsw: "" },
     setupError: "", setupTesting: false,
     settingsForm: {}, showSecrets: {},
-    exportDialogOpen: false, exportSelection: {}, exportingPdf: false,
+    exportDialogOpen: false, exportSelection: {}, exportingPdf: false, exportError: "",
     deleteDialogOpen: false, deleteSelection: {}, deletingCourses: false,
     repoOwner: "", repoName: "", dataBranch: "data",
     _history: [],
@@ -467,6 +467,7 @@ document.addEventListener("alpine:init", () => {
       return (this.lectures || []).filter((lec) => lec.summary && lec.summary.trim());
     },
     openExportDialog() {
+      this.exportError = "";
       const list = this.getExportableLectures();
       if (!list.length) { this._toast("No summarized lectures to export", "error"); return; }
       this.exportSelection = {};
@@ -489,6 +490,20 @@ document.addEventListener("alpine:init", () => {
     selectedExportCount() {
       return this.getExportableLectures().filter((lec) => this.exportSelection[lec.sub_id]).length;
     },
+    exportSelectedLocally() {
+      const selected = this.getExportableLectures().filter(
+        (lec) => this.exportSelection[lec.sub_id]
+      );
+      if (!selected.length) {
+        this._toast("请至少选择一节课程", "error");
+        return;
+      }
+      try {
+        ICS.render.openPrintView(this.currentCourse || {}, selected);
+      } catch (e) {
+        this._toast(e.message || "无法打开打印预览", "error");
+      }
+    },
     async exportSelectedToPdf() {
       // Triggers .github/workflows/export.yml via workflow_dispatch.  The
       // workflow runs scripts/export_course.py (WeasyPrint) and emails the
@@ -510,6 +525,7 @@ document.addEventListener("alpine:init", () => {
         return;
       }
       this.exportingPdf = true;
+      this.exportError = "";
       try {
         const subIds = selected.map((lec) => String(lec.sub_id)).join(",");
         await ICS.github.triggerExportWorkflow(
@@ -522,7 +538,7 @@ document.addEventListener("alpine:init", () => {
           "success"
         );
       } catch (e) {
-        this._toast(e?.message || "Export failed", "error");
+        this.exportError = e?.message || "Export failed";
       } finally {
         this.exportingPdf = false;
       }

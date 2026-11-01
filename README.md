@@ -89,18 +89,19 @@
 功能介绍：
 - **浏览器端解密**：输入你的凭据，浏览器用 WebCrypto 解密 sql.js 读取 shard 数据库，凭据不离开本地
 - **按课程/课次浏览**：查看每节课的转录和摘要内容
-- **导出 PDF**：通过 GitHub Actions 触发导出工作流，生成格式化课程笔记 PDF 并邮件发送
+- **导出 PDF**：点击“本地保存 PDF”打开排版预览，再点击打印并选择“另存为 PDF”，无需 PAT 写权限；也可通过 GitHub Actions 生成 PDF 并邮件发送
 
 前端使用的 Fine-grained PAT 需要将 **Resource owner** 设为仓库所属用户，并在 **Repository access** 中选中当前仓库。各功能所需的 Repository permissions：
 
 | 功能 | PAT 权限 |
 |---|---|
 | 读取加密数据库 | Contents: Read |
-| 导出 PDF | Actions: Read and write，或 Contents: Read and write |
+| 本地保存 PDF（已加载的摘要） | 无需额外写权限 |
+| 后台导出 PDF 并邮件发送 | Actions: Read and write，或 Contents: Read and write |
 | 单次运行、删除课程数据 | Actions: Read and write |
 | 保存订阅（写入 COURSE_IDS Secret） | Secrets: Read and write |
 
-PDF 导出优先使用 `workflow_dispatch`；当 GitHub 返回 403 且请求分支为 `main` 时，自动使用 `repository_dispatch` 的 `export-course` 事件兼容已有 Contents 写权限的 PAT。兼容入口运行默认分支上的 `export.yml`，因此升级时需要同时更新前端和默认分支上的 workflow。workflow 内的 `permissions: contents: read` 控制运行期间的 `GITHUB_TOKEN`，不能为浏览器中的 PAT 增加权限。
+后台 PDF 导出优先使用 `workflow_dispatch`；当 GitHub 返回 403/404 且请求分支为 `main` 时，自动使用 `repository_dispatch` 的 `export-course` 事件兼容已有 Contents 写权限的 PAT。兼容入口运行默认分支上的 `export.yml`，因此升级时需要同时更新前端和默认分支上的 workflow。workflow 内的 `permissions: contents: read` 控制运行期间的 `GITHUB_TOKEN`，不能为浏览器中的 PAT 增加权限。两个入口都返回 403 时，当前 PAT 未获得足够的仓库授权，需要在 GitHub 修改权限，或使用本地保存入口。
 
 若两个导出入口都返回 403，请到 [PAT 设置](https://github.com/settings/personal-access-tokens) 检查所选仓库及上述权限；更换 PAT 后，在前端 Settings 中更新并点击 **Save & Reload**。也可进入仓库 **Actions → Export Course Summaries → Run workflow**，填写 `course_id`、选择 `export_type: PDF`，手动导出。
 
